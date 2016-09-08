@@ -55,6 +55,8 @@ static NSString *keychainDBPassAccount    = @"TSDatabasePass";
 }
 
 - (void)setupDatabase {
+    [TSDatabaseView registerSeparatedThreadDatabaseView];
+
     [TSDatabaseView registerThreadDatabaseView];
     [TSDatabaseView registerBuddyConversationDatabaseView];
     [TSDatabaseView registerUnreadDatabaseView];

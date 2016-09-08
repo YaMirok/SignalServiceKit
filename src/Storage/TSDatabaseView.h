@@ -11,6 +11,12 @@
 
 @interface TSDatabaseView : NSObject
 
+extern NSString *TSInboxSingleChatGroup;
+extern NSString *TSInboxGroupChatGroup;
+
+extern NSString *TSSeparatedThreadDatabaseViewExtensionName;
++ (BOOL)registerSeparatedThreadDatabaseView;
+
 extern NSString *TSInboxGroup;
 extern NSString *TSArchiveGroup;
 extern NSString *TSUnreadIncomingMessagesGroup;

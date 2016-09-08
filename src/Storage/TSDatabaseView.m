@@ -14,6 +14,10 @@
 #import "TSStorageManager.h"
 #import "TSThread.h"
 
+NSString *TSInboxGroupChatGroup = @"TSInboxGroupChatGroup";
+NSString *TSInboxSingleChatGroup = @"TSInboxSingleChatGroup";
+NSString *TSSeparatedThreadDatabaseViewExtensionName = @"TSSeparatedThreadDatabaseViewExtensionName";
+
 NSString *TSInboxGroup   = @"TSInboxGroup";
 NSString *TSArchiveGroup = @"TSArchiveGroup";
 
@@ -56,6 +60,55 @@ NSString *TSUnreadDatabaseViewExtensionName  = @"TSUnreadDatabaseViewExtensionNa
 
     return
         [[TSStorageManager sharedManager].database registerExtension:view withName:TSUnreadDatabaseViewExtensionName];
+}
+
++ (BOOL)registerSeparatedThreadDatabaseView {
+    YapDatabaseView *threadView =
+            [[TSStorageManager sharedManager].database registeredExtension:TSSeparatedThreadDatabaseViewExtensionName];
+    if (threadView) {
+        return YES;
+    }
+
+    YapDatabaseViewGrouping *viewGrouping = [YapDatabaseViewGrouping
+            withObjectBlock:^NSString *(
+                    YapDatabaseReadTransaction *transaction, NSString *collection, NSString *key, id object) {
+                if ([object isKindOfClass:[TSThread class]]) {
+                    TSThread *thread = (TSThread *) object;
+                    if (thread.archivalDate) {
+                        if ([self threadShouldBeInInbox:thread]) {
+                            if (thread.isGroupThread) {
+                                return TSInboxGroupChatGroup;
+                            }
+                            return TSInboxSingleChatGroup;
+                        }
+                        return TSArchiveGroup;
+                    } else if (thread.archivalDate) {
+                        return TSArchiveGroup;
+                    } else {
+                        if ([self threadShouldBeInInbox:thread]) {
+                            if (thread.isGroupThread) {
+                                return TSInboxGroupChatGroup;
+                            }
+                            return TSInboxSingleChatGroup;
+                        }
+                    }
+                }
+                return nil;
+            }];
+
+    YapDatabaseViewSorting *viewSorting = [self threadSorting];
+
+    YapDatabaseViewOptions *options = [[YapDatabaseViewOptions alloc] init];
+    options.isPersistent = NO;
+    options.allowedCollections =
+            [[YapWhitelistBlacklist alloc] initWithWhitelist:[NSSet setWithObject:[TSThread collection]]];
+
+    YapDatabaseView *databaseView =
+            [[YapDatabaseView alloc] initWithGrouping:viewGrouping sorting:viewSorting versionTag:@"1" options:options];
+
+    return [[TSStorageManager sharedManager]
+            .database registerExtension:databaseView
+                               withName:TSSeparatedThreadDatabaseViewExtensionName];
 }
 
 + (BOOL)registerThreadDatabaseView {
